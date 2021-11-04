@@ -1,0 +1,71 @@
+(define (problem roverprob1234) (:domain Rover)
+(:objects
+	general - lander
+	colour high_res low_res - mode
+	rover0 - rover
+	rover0store - store
+	waypoint0 waypoint1 - waypoint
+	camera0 - camera
+	objective0 - objective
+	)
+
+(:init
+	(= (total_time) 0)
+	(= (rover_x rover0) 0)
+	(= (rover_y rover0) 0)
+	(= (distance) 0)
+
+	(= (waypoint_x waypoint0) 30)
+	(= (waypoint_y waypoint0) 30)
+	(= (waypoint_width waypoint0) 10)
+	(= (waypoint_height waypoint0) 10)
+
+	(= (waypoint_x waypoint1) 70)
+	(= (waypoint_y waypoint1) 30)
+	(= (waypoint_width waypoint1) 10)
+	(= (waypoint_height waypoint1) 10)
+
+	(= (recharges) 0)
+
+	(at_soil_sample waypoint1)
+
+	(in_sun waypoint0)
+
+	(at_rock_sample waypoint0)
+	(at_lander general waypoint0)
+	(at_lander general waypoint1)
+
+	(= (energy rover0) 58)
+
+	(store_of rover0store rover0)
+	
+	(empty rover0store)
+	
+	(equipped_for_soil_analysis rover0)
+	(equipped_for_rock_analysis rover0)
+	(equipped_for_imaging rover0)
+
+	(on_board camera0 rover0)
+	(calibration_target camera0 objective0)
+	
+	(supports camera0 colour)
+	(supports camera0 high_res)
+	
+	(visible_from objective0 waypoint0)
+
+	(visible waypoint0 waypoint0)
+	(visible waypoint0 waypoint1)
+	(visible waypoint1 waypoint0)
+	(visible waypoint1 waypoint1)
+)
+
+(:goal (and
+(communicated_soil_data waypoint1)
+(communicated_rock_data waypoint0)
+(communicated_image_data objective0 high_res)
+	)
+)
+
+(:metric minimize (distance))
+)
+

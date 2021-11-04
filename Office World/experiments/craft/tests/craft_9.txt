@@ -1,0 +1,5 @@
+"craftworld"
+"../experiments/craft/maps/map_9.map" # map
+["../experiments/craft/reward_machines/t%d.txt"%i for i in [1,2,3,4,5,6,7,8,9,10]]  # tasks
+[22, 31, 23, 18, 37, 43, 52, 31, 51, 83] # optimal policies
+False      # consider_night

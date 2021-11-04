@@ -1,0 +1,275 @@
+from argParser import *
+from agent import *
+from env import *
+
+import torch.optim as optim
+
+import torch
+import tqdm
+import time
+import pickle
+import numpy as np
+from runx.logx import logx
+
+from collections import Counter
+
+import os
+import shutil
+import pdb
+import pickle
+
+Num_subgoal = 5
+goal_to_train = [i for i in range(Num_subgoal)]
+
+maxStepsPerEpisode = 1000
+logx.initialize(logdir=args.logdir, hparams=vars(args), tensorboard=True)
+
+env = OfficeEnv(1)
+
+agent_list = [Q_table(i,108,4,1000) for i in range(Num_subgoal)]
+metaAgent = SymbolicModel()
+
+
+#record the random experience num of a subgoal
+option_t = [0 for _ in range(Num_subgoal)]
+
+success_tracker = [[] for _ in range(Num_subgoal)]
+
+sample_t = [0 for _ in range(Num_subgoal)]
+option_performance = [0 for _ in range(Num_subgoal)]
+
+option_learned = [False for _ in range(Num_subgoal)]
+
+
+Steps = 0
+test_rew = 0
+rew_num = 0
+episodeCount = 0
+cumulative_average_reward = 0
+test_external_rew = 0
+#random_exp = []
+
+data = {}
+data['Steps'] = []
+data['episode'] = []
+data['trainMeta/externalRewards'] = []
+data['trainMeta/cumulative_average_rew'] = []
+data['trainGoal/sample_used'] = []
+for i in range(Num_subgoal):
+    data['trainGoal/success_ratio_'+str(i)] = []
+
+
+#delete previous data
+#rootdir = r+args.logdir
+def deleteDir():
+    filelist = os.listdir(rootdir)
+    for f in filelist:
+        filepath = os.path.join(rootdir,f)
+        if os.path.isfile(filepath):
+            os.remove(filepath)
+            print(str(filepath)+" is removed!")
+        elif os.path.isdir(filepath):
+            shutil.rmtree(filepath,True)
+            print("dir "+str(filepath)+" is removed!")
+    shutil.rmtree(rootdir,True)
+    print("successfully deleted!")
+    
+"""
+if os.path.isdir(rootdir):
+    deleteDir()
+"""
+#load model
+'''
+path_checkpoint = "./norldata/last_checkpoint_ep524.pth"
+checkpoint = torch.load(path_checkpoint)
+for goal in goal_to_train:
+    agent_list[goal].model.load_state_dict(checkpoint['goal'+str(goal)]) #加载模型参数
+    agent_list[goal].set_eps(checkpoint['eps'+str(goal)]) 
+    agent_list[goal].optim.load_state_dict(checkpoint['goal'+str(goal)+'_optim']) #加载优化器参数
+
+metaAgent.synchronization(checkpoint['meta'])
+
+
+episodeCount = 524
+'''
+
+#start training
+
+
+
+with tqdm.tqdm(total=200000,desc = 'Train', **tqdm_config) as t:
+    while episodeCount <= t.total:
+        episodeCount += 1
+        env.restart()
+        total_rew = 0
+        episodeSteps = 0
+        symstate = env.getSymbolicState()
+        quality = metaAgent.getQuality()
+        metaAgent.generateDomainFile()
+        metaAgent.generateProblemFile(symstate,quality)
+        metaAgent.generatePlan()
+
+        #metaAgent.plan(predicate_loc,iskey,quality)
+        subgoalSteps = 0 #the index of the plan
+        externalRewards = 0
+
+        if episodeCount%50==0:
+            logx.msg("episode: {}".format(episodeCount))
+            logx.msg('plan: {}'.format(metaAgent.getPlan()))
+
+        numstate_trace = []
+        numstate = env.getNumState()
+        numstate_trace.append(numstate)
+        subgoal = Num_subgoal-1
+        lastsubgoal = subgoal
+        while not env.isTerminal() and episodeSteps <= maxStepsPerEpisode:
+            #choose a subgoal
+            lastsubgoal = subgoal
+            subgoal = metaAgent.act(subgoalSteps)
+            subgoalSteps += 1
+            sub_externalReward = 0
+            numstate = env.getNumState()
+            lastnumstate = numstate
+            #excute planlastnumstate
+            if subgoal != -1:
+                goalnumstate = metaAgent.getgoalnumstate(subgoal)
+                numstate = env.getNumState()
+                while not env.isTerminal() and numstate != goalnumstate and episodeSteps <= maxStepsPerEpisode:
+                    episodeSteps += 1
+                    obs1 = env.getstate()
+                    
+                    act = agent_list[subgoal].choose_action(obs1)
+                    u2,s2,tmp_rew,done = env.execute_action(act)
+                    sub_externalReward += tmp_rew
+                    total_rew += tmp_rew
+                    obs2 = env.getstate()
+                    numstate = env.getNumState()
+                    intrinsicRewards = agent_list[subgoal].criticize(numstate==goalnumstate,done)
+                    agent_list[subgoal].learn(obs1,act,intrinsicRewards,obs2)
+
+                Steps += episodeSteps
+                option_t[subgoal]+=episodeSteps
+                metaAgent.add(subgoal,sub_externalReward)      
+
+                if numstate == goalnumstate:
+                    lastnumstate = goalnumstate
+                    numstate_trace.append(goalnumstate)
+                    success_tracker[subgoal].append(1)
+                    episodeSteps = 0
+                else:
+                    success_tracker[subgoal].append(0)
+                    metaAgent.clearPlan()
+
+            else: #use the global option
+                numstate = lastnumstate
+                subgoal = Num_subgoal-1
+                episodeSteps = 0
+                while numstate==lastnumstate and not env.isTerminal() and episodeSteps <= maxStepsPerEpisode:
+                    episodeSteps += 1
+                    obs1 = env.getstate()
+                    act = agent_list[subgoal].choose_action(obs1)
+                    u2,s2,tmp_rew,done = env.execute_action(act)
+                    sub_externalReward += tmp_rew
+                    total_rew += tmp_rew
+                    obs2 = env.getstate()
+                    numstate = env.getNumState()
+                    
+                Steps += episodeSteps
+
+                if numstate != lastnumstate:
+                    numstate_trace.append(numstate)
+                    subgoal = metaAgent.getsubgoal(lastnumstate,numstate)
+                    
+                
+                    option_t[subgoal]+=episodeSteps
+                    Steps+=episodeSteps
+                    episodeSteps = 0
+                    
+                    metaAgent.add(subgoal,sub_externalReward)
+                    success_tracker[subgoal].append(1)
+
+            #an subgoal finished
+            externalRewards += sub_externalReward
+
+
+        #an episode finished
+        rew_num += 1
+        #compute average rewards
+        cumulative_average_reward = (cumulative_average_reward * (rew_num -1)+externalRewards)/rew_num
+
+
+        # save train metrics
+        logx.add_scalar('trainMeta/train_rew/episode', externalRewards, episodeCount)
+        logx.add_scalar('trainMeta/train_rew/steps', externalRewards, Steps)
+        logx.add_scalar('trainMeta/cumulative_average_rew/episode', cumulative_average_reward, episodeCount)
+        logx.add_scalar('trainMeta/cumulative_average_rew/steps', cumulative_average_reward, Steps)
+
+        # save train weights
+        save_dict = {}
+        save_dict['meta'] = metaAgent.getall()
+
+        #save data
+        data['Steps'].append(Steps)
+        data['episode'].append(episodeCount)
+        data['trainMeta/externalRewards'].append(externalRewards)
+        data['trainMeta/cumulative_average_rew'].append(cumulative_average_reward)
+        data['trainGoal/sample_used'].append(option_t)
+        for i in range(Num_subgoal):
+            data['trainGoal/success_ratio_'+str(i)].append(option_performance[i])
+
+        for goal in goal_to_train:
+            save_dict['goal' + str(goal)] = agent_list[goal].table()
+            save_dict['eps' + str(goal)] = agent_list[goal].eps
+
+        logx.save_model(save_dict, cumulative_average_reward, episodeCount)
+
+        # save best subgoal weights based on success ratio
+        for goal in goal_to_train:
+            if len(success_tracker[goal]) >= 50:
+                option_performance[goal] = sum(success_tracker[goal][-50:]) / 50.
+
+                if option_performance[goal] >= args.stop_threshold and goal < Num_subgoal-1:
+                    option_learned[goal] = True
+                    agent_list[goal].save_weights()
+                else:
+                    option_learned[goal] = False
+            else:
+                option_performance[goal] = 0.
+            # save best weights
+            # save metrics
+            logx.add_scalar('trainGoal/' + str(goal) + '/success_ratio/episodeCount', option_performance[goal], episodeCount)
+            logx.add_scalar('trainGoal/' + str(goal) + '/success_ratio/Steps', option_performance[goal], Steps)
+
+        # train meta agent
+        #metaAgent.setTabu(option_deadend)
+        metaAgent.setSuccess(option_performance)
+  
+
+        if episodeCount % 50 == 0:
+            with open(args.logdir + '/data.pkl', 'wb') as f:
+                pickle.dump(data, f)        
+
+        # anneal subgoal eps
+        for goal in goal_to_train:
+            agent_list[goal].anneal_eps(option_t[goal], option_learned[goal])
+        
+        if episodeCount%50==0:
+            logx.msg("numstatepair: {}".format(metaAgent.getnumStatepair() ) )
+            logx.msg("numstate_trace: {}".format(numstate_trace))
+            t.update(50)
+            logx.msg("option_learned: {}".format(option_learned))
+            logx.msg("option_t: {}".format(option_t) )
+            logx.msg("success_radio: {}".format(option_performance) )
+
+
+
+
+
+save_dict = {}
+save_dict['meta'] = metaAgent.getall()                
+for goal in goal_to_train:
+    save_dict['goal' + str(goal)] = agent_list[goal].model.state_dict()
+    save_dict['eps' + str(goal)] = agent_list[goal].eps
+    save_dict['goal' + str(goal) + '_optim'] = agent_list[goal].optim.state_dict()
+
+

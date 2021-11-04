@@ -1,0 +1,58 @@
+(define (problem taxi)
+    (:domain Taxi)
+    (:objects 
+    	car0 - car
+    	A - region
+    	B - region
+    	C - region
+    	D - region
+    	p1 - person
+    	p2 - person
+    	p3 - person
+    	p4 - person
+    	p5 - person
+    	)
+	(:init
+		(at p1 C)
+		(at p2 C)
+		(at p3 D)
+		(at p4 C)
+		(at p5 A)
+
+		(= (region-x A) 5)
+		(= (region-y A) 4)
+		(= (width A) 1)
+		(= (height A) 1)
+
+		(= (region-x B) 8)
+		(= (region-y B) 3)
+		(= (width B) 1.5)
+		(= (height B) 1.5)
+
+		(= (region-x C) 0)
+		(= (region-y C) 2)
+		(= (width C) 1.5)
+		(= (height C) 1)
+
+		(= (region-x D) 2)
+		(= (region-y D) 4)
+		(= (width D) 1.5)
+		(= (height D) 1)
+
+		(= (distance) 0)
+		(= (car-x car0) 0)
+		(= (car-y car0) 0)
+		(= (total-time) 0)
+	)
+     (:goal 
+     (and 
+     	(at p1 D)
+     	(at p2 B)
+     	(at p3 B)
+     	(at p4 D)
+     	(at p5 B)
+     	)
+     	)
+     
+     (:metric minimize(distance))
+)

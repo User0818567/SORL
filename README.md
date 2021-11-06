@@ -20,4 +20,32 @@ The whole project is decoupled into the following parts:
 * Office World : the code for reproduing the result of the Office World Domain
 
 ## Start
-For training SORL 
+The parameters of each environment are in argParser.py in each folder.
+### Montezuma's Revenge
+For training SORL Agent
+```
+python SORL.py
+```
+For training HRL Agent
+```
+python hrl.py
+```
+For training SDRL Agent, you can refer to 
+<https://github.com/daomingAU/MontezumaRevenge_SDRL>
+### Office World
+For training SORL Agent
+```
+python SORL.py
+```
+For training HRL Agent
+```
+python hrl.py
+```
+For training SORL Agent in task3 and use the options learned in task1 and task2
+```
+python SORL_portable.py
+```
+For training HRL Agent in task3 and use the options learned in task1 and task2
+```
+python HRL_portable.py
+```

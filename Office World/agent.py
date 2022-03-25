@@ -380,7 +380,7 @@ class Q_table():
         #self.q_target = np.zeros((num_states,num_actions),dtype=np.float64)
         self.eps = 1
         self.gamma = 0.9
-        self.learning_rate = 1
+        self.learning_rate = 0.1
         self.random_play_steps = random_play_steps
         self.goal = name
 

@@ -111,10 +111,10 @@ class OfficeWorld:
         self.objects[(10,1)] = "b"
         self.objects[(10,7)] = "c"
         self.objects[(1,7)] = "d"
-        self.objects[(7,4)] = "e"  # MAIL
+        self.objects[(4,4)] = "e"  # MAIL
         self.objects[(8,2)] = "f"  # COFFEE
         self.objects[(3,6)] = "f"  # COFFEE
-        self.objects[(4,4)] = "g"  # OFFICE
+        self.objects[(7,4)] = "g"  # OFFICE
         self.objects[(4,1)] = "n"  # PLANT
         self.objects[(7,1)] = "n"  # PLANT
         self.objects[(4,7)] = "n"  # PLANT

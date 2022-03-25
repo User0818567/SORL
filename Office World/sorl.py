@@ -21,12 +21,26 @@ import pickle
 Num_subgoal = 5
 goal_to_train = [i for i in range(Num_subgoal)]
 
-maxStepsPerEpisode = 1000
-logx.initialize(logdir=args.logdir, hparams=vars(args), tensorboard=True)
 
-env = OfficeEnv(2)
+logx.initialize(logdir=args.logdir, hparams=vars(args), tensorboard=True)
+# Task1
+maxStepsPerEpisode = 1000
+env = OfficeEnv(1)
 
 agent_list = [Q_table(i,108,4,10000) for i in range(Num_subgoal)]
+
+#Task2
+# maxStepsPerEpisode = 5000
+# env = OfficeEnv(2)
+
+# agent_list = [Q_table(i,108,4,100000) for i in range(Num_subgoal)]
+
+# Task3
+# maxStepsPerEpisode = 5000
+# env = OfficeEnv(3)
+
+# agent_list = [Q_table(i,108,4,100000) for i in range(Num_subgoal)]
+
 metaAgent = SymbolicModel()
 
 

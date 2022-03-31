@@ -329,13 +329,15 @@ with tqdm.tqdm(total=args.episode_limit,desc = 'Train', **tqdm_config) as t:
                     if env.isTerminal():
                          if option_deadend[lastsubgoal]!=-1:
                              option_deadend[lastsubgoal]+=1
+                            
+                    Steps+=episodeSteps
                     if numstate != lastnumstate:
                         numstate_trace.append(numstate)
                         option_deadend[lastsubgoal] = -1
                         subgoal,option = metaAgent.getsubgoal(lastnumstate,numstate)
                     
                         #option_t[subgoal]+=episodeSteps
-                        Steps+=episodeSteps
+                        
                         episodeSteps = 0
                         if numstate == [0,0]:
                             for _ in range(100):

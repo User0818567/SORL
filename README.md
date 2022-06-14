@@ -1,4 +1,4 @@
-# SORL: Automatic Symbolic Option Discovery for Facilitating Deep Reinforcement Learning
+# Creativity of AI: Automatic Symbolic Option Discovery for Facilitating Deep Reinforcement Learning
 * Introduction
 * Dependencies
 * Project Structure
